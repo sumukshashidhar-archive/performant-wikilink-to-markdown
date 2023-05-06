@@ -1,5 +1,5 @@
 # performant-wikilink-to-markdown
-High Performant Conversion of Referenced Wikilinks to Markdown. Use with LogSeq, Obsidian, etc. The purpose of this is to allow you to use a reference style for wikilinks in your markdown files, and then convert them to the wikilink format for posterity and backups.
+High Performant Conversion of Referenced Wikilinks to Markdown. Use with LogSeq, Obsidian, etc. The purpose of this is to allow you to use a reference style for wikilinks in your markdown files, and then convert them to the markdown format for posterity and backups.
 
 
 ## Usage
