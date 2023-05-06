@@ -1,1 +1,1 @@
-This is the file to which the other markdown file refers. This has a ghost reference to [x], and a wikilink reference to [y](y.md).
+This is the file to which the other markdown file refers. This has a ghost reference to [x](./), and a wikilink reference to [y](./dir/y.md).

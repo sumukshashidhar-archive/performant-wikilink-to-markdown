@@ -2,7 +2,7 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
-use urlencoding::encode;
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -44,8 +44,11 @@ fn find_reference(reference: &str, entries: &Vec<String>) -> String {
         }
     }
     if let Some(entry) = matching_entry {
-        let encoded_filename = encode(Path::new(entry).file_name().unwrap().to_str().unwrap());
-        format!("[{}]({})", reference, encoded_filename)
+        let path = PathBuf::from(entry);
+        let filename = Path::new(entry).to_str().unwrap();
+        let start_index = filename.find('/').and_then(|i| filename[i + 1..].find('/').map(|j| i + j + 1)).unwrap_or(0);
+        let encoded_filename = &filename[start_index..].replace(" ", "%20");
+        format!("[{}](.{})", reference, encoded_filename)
     } else {
         format!("[{}](./)", reference)
     }
@@ -62,35 +65,51 @@ fn read_file(path: &str) -> Result<String, std::io::Error> {
 
 fn get_entries(path: &str) -> Vec<String> {
     let mut entries = Vec::new();
-    if let Err(_) = fs::read_dir(path) {
-        return entries;
+
+    match fs::read_dir(path) {
+        Ok(entries_results) => {
+            for entry_result in entries_results {
+                if let Ok(entry) = entry_result {
+                    let entry_path = entry.path();
+                    
+                    if entry_path.is_file() {
+                        if let Some(path_str) = entry_path.to_str() {
+                            entries.push(path_str.to_owned());
+                        }
+                    } else if entry_path.is_dir() {
+                        let subentries = get_entries(entry_path.to_str().unwrap());
+                        entries.extend(subentries);
+                    }
+                }
+            }
+        },
+        Err(_) => {},
     }
 
-    for entry_result in fs::read_dir(path).unwrap() {
-        if let Ok(entry) = entry_result {
-            let entry_path = entry.path();
-            if entry_path.is_file() {
-                entries.push(entry_path.to_str().unwrap().to_owned());
-            } else if entry_path.is_dir() {
-                let subentries = get_entries(entry_path.to_str().unwrap());
-                entries.extend(subentries);
-            }
-        }
-    }
     entries
 }
 
-fn get_output_path<'a>(path: &'a str, input_dir: &'a str, output_dir: &'a str) -> PathBuf {
+
+
+fn get_output_path(path: &str, input_dir: &str, output_dir: &str) -> PathBuf {
     let input_path = Path::new(input_dir);
     let output_path = Path::new(output_dir);
-    let relative_path = Path::new(path).strip_prefix(input_path).unwrap();
-    let output_path = output_path.join(relative_path);
-    output_path
+    
+    let relative_path = match Path::new(path).strip_prefix(input_path) {
+        Ok(path) => path,
+        Err(_) => Path::new(path),
+    };
+    
+    output_path.join(relative_path)
 }
 
 fn write_output_file(path: &Path, contents: &str) -> std::io::Result<()> {
-    fs::create_dir_all(path.parent().unwrap())?;
+    if let Some(parent_dir) = path.parent() {
+        fs::create_dir_all(parent_dir)?;
+    }
+    
     let mut file = File::create(path)?;
     file.write_all(contents.as_bytes())?;
+    
     Ok(())
 }
