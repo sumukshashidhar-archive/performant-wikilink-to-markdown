@@ -1,1 +1,1 @@
-This is a markdown file with a [[wikikink reference]]
+This is a markdown file with a [[wikilink reference]]
