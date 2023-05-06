@@ -12,7 +12,7 @@ and writes the processed files to the output directory with the same directory s
 
 use std::env;
 use std::fs;
-
+use rayon::prelude::*;
 
 mod file_operations;
 mod wikilink_operations;
@@ -34,7 +34,7 @@ fn main() {
 
 // Processes each entry by reading the file, finding wikilinks, and writing the output.
 fn process_entries(entries: &[String], input_path: &str, output_path: &str) {
-    for entry in entries {
+    entries.par_iter().for_each(|entry| {
         match file_operations::read_file(&entry) {
             Ok(contents) => {
                 let wikilinks = wikilink_operations::find_wikilinks(&contents, &entries, &entry);
@@ -46,7 +46,7 @@ fn process_entries(entries: &[String], input_path: &str, output_path: &str) {
             }
             Err(e) => println!("Error reading file {}: {}", entry, e),
         }
-    }
+    });
 }
 
 
