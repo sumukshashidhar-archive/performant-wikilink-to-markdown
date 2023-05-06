@@ -1,8 +1,14 @@
+use std::env;
 use std::fs::{self, File};
 use std::io::{BufReader, Read};
 
 fn main() {
-    let path = "test";
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: program_name <directory>");
+        return;
+    }
+    let path = &args[1];
     let entries = get_entries(path);
     for entry in &entries {
         match read_file(&entry) {
