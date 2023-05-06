@@ -1,1 +1,1 @@
-This is a markdown file with a [wikilink reference](./candidate/wikilink%20reference.md)
+This is a markdown file with a [wikilink reference](wikilink%20reference.md)

@@ -11,9 +11,11 @@ and writes the processed files to the output directory with the same directory s
 */
 
 use std::env;
-use std::fs::{self, File};
-use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::fs;
+
+
+mod file_operations;
+mod wikilink_operations;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -33,11 +35,11 @@ fn main() {
 // Processes each entry by reading the file, finding wikilinks, and writing the output.
 fn process_entries(entries: &[String], input_path: &str, output_path: &str) {
     for entry in entries {
-        match read_file(&entry) {
+        match file_operations::read_file(&entry) {
             Ok(contents) => {
-                let wikilinks = find_wikilinks(&contents, &entries);
-                let output_file_path = build_output_path(entry, input_path, output_path);
-                match write_output_file(&output_file_path, wikilinks.as_str()) {
+                let wikilinks = wikilink_operations::find_wikilinks(&contents, &entries, &entry);
+                let output_file_path = file_operations::build_output_path(entry, input_path, output_path);
+                match file_operations::write_output_file(&output_file_path, wikilinks.as_str()) {
                     Ok(_) => (),
                     Err(e) => println!("Error writing to output file {}: {}", output_file_path.display(), e),
                 }
@@ -47,47 +49,6 @@ fn process_entries(entries: &[String], input_path: &str, output_path: &str) {
     }
 }
 
-
-// Replaces wikilinks in the given text with their corresponding reference in entries.
-fn find_wikilinks(text: &str, entries: &[String]) -> String {
-    let re = regex::Regex::new(r"\[\[(.+?)\]\]").unwrap();
-    re.replace_all(text, |caps: &regex::Captures| {
-        let reference = caps.get(1).unwrap().as_str();
-        find_reference(reference, entries)
-    })
-    .to_string()
-}
-
-// Finds the corresponding reference in entries and returns the properly formatted link.
-fn find_reference(reference: &str, entries: &[String]) -> String {
-    let matching_entry = entries.iter().find(|entry| {
-        let filename = Path::new(entry).file_stem().unwrap().to_str().unwrap();
-        filename == reference
-    });
-
-    match matching_entry {
-        Some(entry) => format_link(entry, reference),
-        None => format!("[{}](./)", reference),
-    }
-}
-
-// Formats the link using the given entry and reference.
-fn format_link(entry: &str, reference: &str) -> String {
-    let path = PathBuf::from(entry);
-    let filename = path.to_str().unwrap();
-    let start_index = filename.find('/').and_then(|i| filename[i + 1..].find('/').map(|j| i + j + 1)).unwrap_or(0);
-    let encoded_filename = &filename[start_index..].replace(" ", "%20");
-    format!("[{}](.{})", reference, encoded_filename)
-}
-
-// Reads the contents of the file at the given path.
-fn read_file(path: &str) -> Result<String, std::io::Error> {
-    let file = File::open(path)?;
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)?;
-    Ok(contents)
-}
 
 // Recursively retrieves file entries in the specified directory.
 fn get_entries(path: &str) -> Result<Vec<String>, std::io::Error> {
@@ -110,28 +71,3 @@ fn get_entries(path: &str) -> Result<Vec<String>, std::io::Error> {
 
     Ok(entries)
 }
-
-
-// Builds the output file path based on the input and output directories.
-fn build_output_path(entry: &str, input_dir: &str, output_dir: &str) -> PathBuf {
-    let input_path = Path::new(input_dir);
-    let output_path = Path::new(output_dir);
-    let relative_path = match Path::new(entry).strip_prefix(input_path) {
-        Ok(path) => path,
-        Err(_) => Path::new(entry),
-    };
-    
-    output_path.join(relative_path)
-}
-
-// Writes the contents to the output file at the specified path.
-fn write_output_file(path: &Path, contents: &str) -> std::io::Result<()> {
-    if let Some(parent_dir) = path.parent() {
-    fs::create_dir_all(parent_dir)?;
-    }
-    let mut file = File::create(path)?;
-    file.write_all(contents.as_bytes())?;
-
-    Ok(())
-}
-
