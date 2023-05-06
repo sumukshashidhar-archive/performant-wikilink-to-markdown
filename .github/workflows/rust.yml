@@ -28,14 +28,3 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
-
-
-    - name: Build Binary
-      run: cargo build --release -C target-cpu=x86_64-unknown-linux-gnu -C panic=abort --strip
-
-    - name: Publish Binary
-      uses: ncsoft/gh-action-github-release@v1.3.2
-      with:
-        tag_name: v${{ github.ref }}
-        release_title: Release ${{ github.ref }}
-        files: ./target/release/performant-markdown-to-wikilink
